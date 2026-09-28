@@ -5,9 +5,11 @@ const { Server } = require("socket.io");
 
 const app = express();
 
-app.use(cors({
-    origin: "*"
-}));
+app.use(cors());
+
+app.get("/", (req, res) => {
+    res.send("❤️ Romantic Connect 4 server is online!");
+});
 
 const server = http.createServer(app);
 
@@ -19,93 +21,54 @@ const io = new Server(server, {
 });
 
 
-const PORT =
-    process.env.PORT || 3000;
+const rooms = new Map();
 
 
-/*
-    ONLINE KAMERS
-*/
+function createBoard() {
 
-const rooms = {};
+    return Array.from(
+        { length: 6 },
+        () => Array(7).fill(null)
+    );
+
+}
 
 
-/*
-    KAMER CODE
-*/
-
-function createRoomCode() {
+function generateRoomCode() {
 
     const characters =
         "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
     let code = "";
 
-    for (let i = 0; i < 5; i++) {
+    do {
 
-        code +=
-            characters[
+        code = "";
+
+        for (let i = 0; i < 6; i++) {
+
+            code += characters[
                 Math.floor(
                     Math.random() *
                     characters.length
                 )
             ];
-    }
+
+        }
+
+    } while (rooms.has(code));
 
     return code;
 }
 
 
-/*
-    NIEUWE GAME
-*/
-
-function newGame() {
-
-    return {
-
-        board:
-            Array(42).fill(0),
-
-        currentPlayer: 1,
-
-        winner: null,
-
-        gameOver: false,
-
-        players: {}
-
-    };
-}
-
-
-/*
-    WINNAAR CONTROLEREN
-*/
-
 function checkWinner(board, player) {
 
     const rows = 6;
-    const columns = 7;
+    const cols = 7;
 
 
-    function get(row, column) {
-
-        if (
-            row < 0 ||
-            row >= rows ||
-            column < 0 ||
-            column >= columns
-        ) {
-
-            return 0;
-        }
-
-        return board[
-            row * columns + column
-        ];
-    }
-
+    // horizontaal
 
     for (
         let row = 0;
@@ -114,642 +77,587 @@ function checkWinner(board, player) {
     ) {
 
         for (
-            let column = 0;
-            column < columns;
-            column++
+            let col = 0;
+            col < cols - 3;
+            col++
         ) {
 
             if (
-                get(row, column) !== player
-            ) {
-                continue;
-            }
-
-
-            /*
-                horizontaal
-            */
-
-            if (
-                get(row, column + 1) === player &&
-                get(row, column + 2) === player &&
-                get(row, column + 3) === player
+                board[row][col] === player &&
+                board[row][col + 1] === player &&
+                board[row][col + 2] === player &&
+                board[row][col + 3] === player
             ) {
 
                 return true;
+
             }
 
-
-            /*
-                verticaal
-            */
-
-            if (
-                get(row + 1, column) === player &&
-                get(row + 2, column) === player &&
-                get(row + 3, column) === player
-            ) {
-
-                return true;
-            }
-
-
-            /*
-                diagonaal rechts
-            */
-
-            if (
-                get(row + 1, column + 1) === player &&
-                get(row + 2, column + 2) === player &&
-                get(row + 3, column + 3) === player
-            ) {
-
-                return true;
-            }
-
-
-            /*
-                diagonaal links
-            */
-
-            if (
-                get(row + 1, column - 1) === player &&
-                get(row + 2, column - 2) === player &&
-                get(row + 3, column - 3) === player
-            ) {
-
-                return true;
-            }
         }
+
     }
+
+
+    // verticaal
+
+    for (
+        let row = 0;
+        row < rows - 3;
+        row++
+    ) {
+
+        for (
+            let col = 0;
+            col < cols;
+            col++
+        ) {
+
+            if (
+                board[row][col] === player &&
+                board[row + 1][col] === player &&
+                board[row + 2][col] === player &&
+                board[row + 3][col] === player
+            ) {
+
+                return true;
+
+            }
+
+        }
+
+    }
+
+
+    // diagonaal naar rechts
+
+    for (
+        let row = 0;
+        row < rows - 3;
+        row++
+    ) {
+
+        for (
+            let col = 0;
+            col < cols - 3;
+            col++
+        ) {
+
+            if (
+                board[row][col] === player &&
+                board[row + 1][col + 1] === player &&
+                board[row + 2][col + 2] === player &&
+                board[row + 3][col + 3] === player
+            ) {
+
+                return true;
+
+            }
+
+        }
+
+    }
+
+
+    // diagonaal naar links
+
+    for (
+        let row = 0;
+        row < rows - 3;
+        row++
+    ) {
+
+        for (
+            let col = 3;
+            col < cols;
+            col++
+        ) {
+
+            if (
+                board[row][col] === player &&
+                board[row + 1][col - 1] === player &&
+                board[row + 2][col - 2] === player &&
+                board[row + 3][col - 3] === player
+            ) {
+
+                return true;
+
+            }
+
+        }
+
+    }
+
 
     return false;
 }
 
 
-/*
-    BORD VOL?
-*/
+function boardIsFull(board) {
 
-function isBoardFull(board) {
+    for (const row of board) {
 
-    return board.every(
-        cell => cell !== 0
-    );
+        for (const cell of row) {
+
+            if (!cell) {
+
+                return false;
+
+            }
+
+        }
+
+    }
+
+    return true;
 }
 
 
-/*
-    GAME STATE
-*/
+io.on("connection", (socket) => {
 
-function sendGameState(roomCode) {
-
-    const room =
-        rooms[roomCode];
-
-    if (!room) return;
+    console.log(
+        "Nieuwe speler:",
+        socket.id
+    );
 
 
-    io.to(roomCode).emit(
-        "gameState",
-        {
+    /*
+        ROOM MAKEN
+    */
 
-            board:
-                room.board,
+    socket.on(
+        "createRoom",
+        () => {
 
-            currentPlayer:
-                room.currentPlayer,
+            const roomCode =
+                generateRoomCode();
 
-            winner:
-                room.winner,
+            rooms.set(
+                roomCode,
+                {
+                    board: createBoard(),
+                    currentTurn: "red",
+                    players: {
+                        red: socket.id,
+                        yellow: null
+                    }
+                }
+            );
 
-            gameOver:
-                room.gameOver,
 
-            players:
-                Object.keys(
-                    room.players
-                ).length
+            socket.join(roomCode);
+
+            socket.data.roomCode =
+                roomCode;
+
+            socket.data.player =
+                "red";
+
+
+            socket.emit(
+                "roomCreated",
+                {
+                    roomCode,
+                    player: "red"
+                }
+            );
+
+
+            console.log(
+                "Room gemaakt:",
+                roomCode
+            );
+
         }
     );
-}
 
 
-/*
-    VERBINDING
-*/
+    /*
+        ROOM JOINEN
+    */
 
-io.on(
-    "connection",
-    socket => {
+    socket.on(
+        "joinRoom",
+        (roomCode) => {
 
-        console.log(
-            "Nieuwe speler:",
-            socket.id
-        );
-
-
-        /*
-            KAMER MAKEN
-        */
-
-        socket.on(
-            "createRoom",
-            () => {
-
-                let roomCode;
-
-                do {
-
-                    roomCode =
-                        createRoomCode();
-
-                } while (
-                    rooms[roomCode]
-                );
+            const code =
+                String(roomCode)
+                    .trim()
+                    .toUpperCase();
 
 
-                rooms[roomCode] =
-                    newGame();
+            const room =
+                rooms.get(code);
 
 
-                rooms[roomCode]
-                    .players[
-                        socket.id
-                    ] = 1;
-
-
-                socket.join(
-                    roomCode
-                );
-
-
-                socket.roomCode =
-                    roomCode;
-
-                socket.playerNumber =
-                    1;
-
+            if (!room) {
 
                 socket.emit(
-                    "roomCreated",
-                    {
-                        roomCode:
-                            roomCode,
-
-                        player:
-                            1
-                    }
+                    "roomError",
+                    "Deze kamer bestaat niet. ❤️"
                 );
 
+                return;
 
-                sendGameState(
-                    roomCode
-                );
             }
-        );
 
 
-        /*
-            KAMER JOINEN
-        */
-
-        socket.on(
-            "joinRoom",
-            code => {
-
-                const roomCode =
-                    String(code)
-                        .trim()
-                        .toUpperCase();
-
-
-                const room =
-                    rooms[roomCode];
-
-
-                if (!room) {
-
-                    socket.emit(
-                        "errorMessage",
-                        "Bu oda bulunamadı. ❤️"
-                    );
-
-                    return;
-                }
-
-
-                const playerCount =
-                    Object.keys(
-                        room.players
-                    ).length;
-
-
-                if (
-                    playerCount >= 2
-                ) {
-
-                    socket.emit(
-                        "errorMessage",
-                        "Bu oda zaten dolu. ❤️"
-                    );
-
-                    return;
-                }
-
-
-                room.players[
-                    socket.id
-                ] = 2;
-
-
-                socket.join(
-                    roomCode
-                );
-
-
-                socket.roomCode =
-                    roomCode;
-
-                socket.playerNumber =
-                    2;
-
+            if (room.players.yellow) {
 
                 socket.emit(
-                    "roomJoined",
+                    "roomError",
+                    "Deze kamer is al vol. ❤️"
+                );
+
+                return;
+
+            }
+
+
+            socket.join(code);
+
+            socket.data.roomCode =
+                code;
+
+            socket.data.player =
+                "yellow";
+
+            room.players.yellow =
+                socket.id;
+
+
+            socket.emit(
+                "roomJoined",
+                {
+                    roomCode: code,
+                    player: "yellow"
+                }
+            );
+
+
+            io.to(code).emit(
+                "gameStart",
+                {
+                    board: room.board,
+                    currentTurn:
+                        room.currentTurn
+                }
+            );
+
+
+            console.log(
+                "Speler toegevoegd aan:",
+                code
+            );
+
+        }
+    );
+
+
+    /*
+        ZET MAKEN
+    */
+
+    socket.on(
+        "move",
+        (data) => {
+
+            if (!data) return;
+
+
+            const code =
+                String(
+                    data.roomCode || ""
+                )
+                .trim()
+                .toUpperCase();
+
+
+            const column =
+                Number(data.column);
+
+
+            const room =
+                rooms.get(code);
+
+
+            if (!room) return;
+
+
+            const player =
+                socket.data.player;
+
+
+            /*
+                Alleen spelers uit deze
+                kamer mogen spelen.
+            */
+
+            if (
+                socket.data.roomCode !== code
+            ) {
+
+                return;
+
+            }
+
+
+            /*
+                Alleen tijdens de eigen beurt.
+            */
+
+            if (
+                room.currentTurn !== player
+            ) {
+
+                return;
+
+            }
+
+
+            /*
+                Kolom controleren.
+            */
+
+            if (
+                !Number.isInteger(column) ||
+                column < 0 ||
+                column > 6
+            ) {
+
+                return;
+
+            }
+
+
+            /*
+                Vrije rij zoeken.
+            */
+
+            let row = -1;
+
+
+            for (
+                let r = 5;
+                r >= 0;
+                r--
+            ) {
+
+                if (
+                    !room.board[r][column]
+                ) {
+
+                    row = r;
+
+                    break;
+
+                }
+
+            }
+
+
+            if (row === -1) {
+
+                return;
+
+            }
+
+
+            /*
+                Steen plaatsen.
+            */
+
+            room.board[row][column] =
+                player;
+
+
+            /*
+                Winnaar controleren.
+            */
+
+            if (
+                checkWinner(
+                    room.board,
+                    player
+                )
+            ) {
+
+                io.to(code).emit(
+                    "gameOver",
                     {
-                        roomCode:
-                            roomCode,
-
-                        player:
-                            2
+                        board: room.board,
+                        winner: player
                     }
                 );
 
+                return;
 
-                io.to(roomCode).emit(
-                    "loveMessage",
-                    "💕 Artık ikiniz de buradasınız. Aşk dolu bir oyun başlasın! ❤️"
-                );
-
-
-                sendGameState(
-                    roomCode
-                );
             }
-        );
 
 
-        /*
-            STEEN PLAATSEN
-        */
+            /*
+                Gelijkspel controleren.
+            */
 
-        socket.on(
-            "dropPiece",
-            column => {
+            if (
+                boardIsFull(
+                    room.board
+                )
+            ) {
 
-                const roomCode =
-                    socket.roomCode;
-
-
-                const room =
-                    rooms[roomCode];
-
-
-                if (!room) return;
-
-
-                if (
-                    room.gameOver
-                ) return;
-
-
-                /*
-                    Tweede speler moet
-                    aanwezig zijn.
-                */
-
-                if (
-                    Object.keys(
-                        room.players
-                    ).length !== 2
-                ) {
-
-                    socket.emit(
-                        "errorMessage",
-                        "Sevgilinin oyuna katılmasını bekle. ❤️"
-                    );
-
-                    return;
-                }
-
-
-                /*
-                    Juiste speler?
-                */
-
-                if (
-                    socket.playerNumber !==
-                    room.currentPlayer
-                ) {
-
-                    socket.emit(
-                        "errorMessage",
-                        "Şimdi sıra sende değil aşkım. 💕"
-                    );
-
-                    return;
-                }
-
-
-                column =
-                    Number(column);
-
-
-                if (
-                    !Number.isInteger(
-                        column
-                    ) ||
-                    column < 0 ||
-                    column > 6
-                ) {
-
-                    return;
-                }
-
-
-                /*
-                    Vrije rij zoeken
-                */
-
-                let row = -1;
-
-
-                for (
-                    let r = 5;
-                    r >= 0;
-                    r--
-                ) {
-
-                    if (
-                        room.board[
-                            r * 7 + column
-                        ] === 0
-                    ) {
-
-                        row = r;
-
-                        break;
+                io.to(code).emit(
+                    "gameOver",
+                    {
+                        board: room.board,
+                        winner: "draw"
                     }
-                }
-
-
-                /*
-                    Kolom vol
-                */
-
-                if (
-                    row === -1
-                ) {
-
-                    socket.emit(
-                        "errorMessage",
-                        "Bu sütun dolu aşkım. ❤️"
-                    );
-
-                    return;
-                }
-
-
-                /*
-                    Steen
-                */
-
-                room.board[
-                    row * 7 + column
-                ] =
-                    room.currentPlayer;
-
-
-                /*
-                    Winnaar
-                */
-
-                if (
-                    checkWinner(
-                        room.board,
-                        room.currentPlayer
-                    )
-                ) {
-
-                    room.winner =
-                        room.currentPlayer;
-
-                    room.gameOver =
-                        true;
-
-                }
-
-                else if (
-                    isBoardFull(
-                        room.board
-                    )
-                ) {
-
-                    room.winner =
-                        0;
-
-                    room.gameOver =
-                        true;
-
-                }
-
-                else {
-
-                    room.currentPlayer =
-                        room.currentPlayer === 1
-                            ? 2
-                            : 1;
-                }
-
-
-                sendGameState(
-                    roomCode
                 );
 
+                return;
 
-                /*
-                    Winbericht
-                */
-
-                if (
-                    room.gameOver
-                ) {
-
-                    if (
-                        room.winner === 1
-                    ) {
-
-                        io.to(roomCode).emit(
-                            "loveMessage",
-                            "🏆❤️ Tebrikler aşkım! Bugün oyunu kazandın ama benim kalbimi zaten çoktan kazandın. Seni çok seviyorum! 💕"
-                        );
-
-                    }
-
-                    else if (
-                        room.winner === 2
-                    ) {
-
-                        io.to(roomCode).emit(
-                            "loveMessage",
-                            "🏆❤️ Tebrikler aşkım! Sen benim kalbimin gerçek şampiyonusun. Seni sonsuza kadar seveceğim. 💕"
-                        );
-
-                    }
-
-                    else {
-
-                        io.to(roomCode).emit(
-                            "loveMessage",
-                            "💕 Berabere kaldınız! Ama gerçek kazanan aşkınız. ❤️"
-                        );
-                    }
-                }
             }
-        );
 
 
-        /*
-            YENİDEN OYNA
-        */
+            /*
+                Beurt wisselen.
+            */
 
-        socket.on(
-            "restartGame",
-            () => {
-
-                const roomCode =
-                    socket.roomCode;
+            room.currentTurn =
+                player === "red"
+                    ? "yellow"
+                    : "red";
 
 
-                const room =
-                    rooms[roomCode];
+            /*
+                Nieuwe stand naar
+                beide spelers sturen.
+            */
 
-
-                if (!room) return;
-
-
-                if (
-                    Object.keys(
-                        room.players
-                    ).length !== 2
-                ) {
-
-                    return;
+            io.to(code).emit(
+                "move",
+                {
+                    board: room.board,
+                    currentTurn:
+                        room.currentTurn
                 }
+            );
+
+        }
+    );
 
 
-                room.board =
-                    Array(42).fill(0);
+    /*
+        OPNIEUW SPELEN
+    */
 
-                room.currentPlayer =
-                    1;
+    socket.on(
+        "restartGame",
+        (data) => {
 
-                room.winner =
-                    null;
-
-                room.gameOver =
-                    false;
+            if (!data) return;
 
 
-                io.to(roomCode).emit(
-                    "loveMessage",
-                    "💕 Yeni oyun başladı! Aşkımız gibi bu oyun da hiç bitmesin. ❤️"
-                );
+            const code =
+                String(
+                    data.roomCode || ""
+                )
+                .trim()
+                .toUpperCase();
 
 
-                sendGameState(
-                    roomCode
-                );
+            const room =
+                rooms.get(code);
+
+
+            if (!room) return;
+
+
+            /*
+                Alleen spelers uit de
+                betreffende kamer.
+            */
+
+            if (
+                socket.data.roomCode !== code
+            ) {
+
+                return;
+
             }
-        );
 
 
-        /*
-            VERBINDING VERBROKEN
-        */
+            room.board =
+                createBoard();
 
-        socket.on(
-            "disconnect",
-            () => {
-
-                const roomCode =
-                    socket.roomCode;
+            room.currentTurn =
+                "red";
 
 
-                if (!roomCode) {
-                    return;
+            io.to(code).emit(
+                "gameRestarted",
+                {
+                    board: room.board,
+                    currentTurn:
+                        room.currentTurn
                 }
+            );
+
+        }
+    );
 
 
-                const room =
-                    rooms[roomCode];
+    /*
+        SPELER VERLAAT DE SERVER
+    */
+
+    socket.on(
+        "disconnect",
+        () => {
+
+            console.log(
+                "Speler weg:",
+                socket.id
+            );
 
 
-                if (!room) {
-                    return;
-                }
+            const code =
+                socket.data.roomCode;
 
 
-                delete room.players[
-                    socket.id
-                ];
+            if (!code) return;
 
 
-                socket.to(roomCode).emit(
-                    "opponentLeft"
-                );
+            const room =
+                rooms.get(code);
 
 
-                /*
-                    Kamer leeg?
-                */
-
-                if (
-                    Object.keys(
-                        room.players
-                    ).length === 0
-                ) {
-
-                    delete rooms[
-                        roomCode
-                    ];
-                }
-            }
-        );
-
-    }
-);
+            if (!room) return;
 
 
-app.get(
-    "/",
-    (req, res) => {
+            /*
+                Kamer verwijderen zodra
+                een speler vertrekt.
+            */
 
-        res.send(
-            "❤️ Romantic Connect 4 server is online!"
-        );
-    }
-);
+            rooms.delete(code);
+
+        }
+    );
+
+});
+
+
+const PORT =
+    process.env.PORT || 3000;
 
 
 server.listen(
     PORT,
+    "0.0.0.0",
     () => {
 
         console.log(
-            `Server draait op poort ${PORT}`
+            `❤️ Server draait op poort ${PORT}`
         );
+
     }
 );
