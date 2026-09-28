@@ -2,16 +2,16 @@ const SERVER_URL =
     "https://romantic-connect4.onrender.com";
 
 
-/*
-    SOCKET.IO
-*/
+/* =========================
+   SOCKET.IO
+========================= */
 
 const socket = io(SERVER_URL);
 
 
-/*
-    ELEMENTEN
-*/
+/* =========================
+   ELEMENTEN
+========================= */
 
 const lobby =
     document.getElementById("lobby");
@@ -52,7 +52,9 @@ const gameEnd =
     document.getElementById("gameEnd");
 
 const winnerText =
-    document.getElementById("winnerText");
+    document.getElementById(
+        "winnerText"
+    );
 
 const winnerMessage =
     document.getElementById(
@@ -90,9 +92,9 @@ const surpriseVideo =
     );
 
 
-/*
-    SPELVARIABELEN
-*/
+/* =========================
+   SPELVARIABELEN
+========================= */
 
 let roomCode = "";
 
@@ -105,9 +107,9 @@ let currentTurn = "red";
 let gameOver = false;
 
 
-/*
-    ROMANTISCHE TURKSE BERICHTEN
-*/
+/* =========================
+   ROMANTISCHE TURKSE BERICHTEN
+========================= */
 
 const loveMessages = [
 
@@ -134,9 +136,9 @@ const loveMessages = [
 ];
 
 
-/*
-    SOCKET VERBINDING
-*/
+/* =========================
+   VERBINDING
+========================= */
 
 socket.on(
     "connect",
@@ -160,9 +162,9 @@ socket.on(
 );
 
 
-/*
-    ROOM MAKEN
-*/
+/* =========================
+   ROOM MAKEN
+========================= */
 
 createButton.addEventListener(
     "click",
@@ -176,9 +178,9 @@ createButton.addEventListener(
 );
 
 
-/*
-    ROOM JOINEN
-*/
+/* =========================
+   ROOM JOINEN
+========================= */
 
 joinButton.addEventListener(
     "click",
@@ -206,9 +208,9 @@ joinButton.addEventListener(
 );
 
 
-/*
-    ROOM GEMAAKT
-*/
+/* =========================
+   ROOM GEMAAKT
+========================= */
 
 socket.on(
     "roomCreated",
@@ -229,9 +231,9 @@ socket.on(
 );
 
 
-/*
-    ROOM GEJOINED
-*/
+/* =========================
+   ROOM GEJOINED
+========================= */
 
 socket.on(
     "roomJoined",
@@ -249,9 +251,9 @@ socket.on(
 );
 
 
-/*
-    ROOM FOUT
-*/
+/* =========================
+   ROOM FOUT
+========================= */
 
 socket.on(
     "roomError",
@@ -265,36 +267,30 @@ socket.on(
 );
 
 
-/*
-    SPEL START
-*/
+/* =========================
+   SPEL START
+========================= */
 
 socket.on(
     "gameStart",
     (data) => {
 
-        if (data) {
+        board =
+            data?.board ||
+            createEmptyBoard();
 
-            board =
-                data.board ||
-                createEmptyBoard();
-
-            currentTurn =
-                data.currentTurn ||
-                "red";
-
-        } else {
-
-            board =
-                createEmptyBoard();
-
-            currentTurn =
-                "red";
-        }
+        currentTurn =
+            data?.currentTurn ||
+            "red";
 
         gameOver = false;
 
         gameEnd.classList.add(
+            "hidden"
+        );
+
+        // Surprise opnieuw verbergen
+        surpriseButton.classList.add(
             "hidden"
         );
 
@@ -308,9 +304,9 @@ socket.on(
 );
 
 
-/*
-    ANDERE SPELER MAAKT ZET
-*/
+/* =========================
+   ZET VAN ANDERE SPELER
+========================= */
 
 socket.on(
     "move",
@@ -336,9 +332,9 @@ socket.on(
 );
 
 
-/*
-    SPEL EINDE
-*/
+/* =========================
+   SPEL EINDE
+========================= */
 
 socket.on(
     "gameOver",
@@ -362,9 +358,9 @@ socket.on(
 );
 
 
-/*
-    OPNIEUW
-*/
+/* =========================
+   OPNIEUW SPELEN
+========================= */
 
 socket.on(
     "gameRestarted",
@@ -384,6 +380,11 @@ socket.on(
             "hidden"
         );
 
+        // Surprise opnieuw verbergen
+        surpriseButton.classList.add(
+            "hidden"
+        );
+
         drawBoard();
 
         updateTurn();
@@ -394,9 +395,9 @@ socket.on(
 );
 
 
-/*
-    GAME BINNENGAAN
-*/
+/* =========================
+   GAME BINNENGAAN
+========================= */
 
 function enterGame() {
 
@@ -419,9 +420,9 @@ function enterGame() {
 }
 
 
-/*
-    LEGE BOARD
-*/
+/* =========================
+   LEEG BOARD
+========================= */
 
 function createEmptyBoard() {
 
@@ -436,9 +437,9 @@ function createEmptyBoard() {
 }
 
 
-/*
-    BOARD TEKENEN
-*/
+/* =========================
+   BOARD TEKENEN
+========================= */
 
 function drawBoard() {
 
@@ -493,9 +494,7 @@ function drawBoard() {
             }
 
 
-            /*
-                TOUCH + MUIS
-            */
+            /* Touch + muis */
 
             cell.addEventListener(
                 "click",
@@ -520,11 +519,13 @@ function drawBoard() {
 }
 
 
-/*
-    STEEN PLAATSEN
-*/
+/* =========================
+   STEEN PLAATSEN
+========================= */
 
-function playColumn(column) {
+function playColumn(
+    column
+) {
 
     if (gameOver) return;
 
@@ -536,12 +537,6 @@ function playColumn(column) {
         return;
     }
 
-
-    /*
-        DIRECTE LOKALE CHECK
-        ZODAT JE NIET PER ONGELUK
-        KLIKT OP EEN VOLLE KOLOM
-    */
 
     const row =
         findAvailableRow(
@@ -557,10 +552,6 @@ function playColumn(column) {
     }
 
 
-    /*
-        SERVER
-    */
-
     socket.emit(
         "move",
         {
@@ -572,9 +563,9 @@ function playColumn(column) {
 }
 
 
-/*
-    VRIJE RIJ VINDEN
-*/
+/* =========================
+   VRIJE RIJ VINDEN
+========================= */
 
 function findAvailableRow(
     column
@@ -601,9 +592,9 @@ function findAvailableRow(
 }
 
 
-/*
-    BEURT UPDATE
-*/
+/* =========================
+   BEURT UPDATE
+========================= */
 
 function updateTurn() {
 
@@ -633,9 +624,9 @@ function updateTurn() {
 }
 
 
-/*
-    ROMANTISCH BERICHT
-*/
+/* =========================
+   ROMANTISCH BERICHT
+========================= */
 
 function showRandomLoveMessage() {
 
@@ -651,9 +642,11 @@ function showRandomLoveMessage() {
 }
 
 
-/*
-    EINDE SPEL
-*/
+/* =========================
+   EINDE SPEL
+   ALLEEN WINNAAR KRIJGT
+   DE SURPRISE
+========================= */
 
 function showGameEnd(
     winner
@@ -663,9 +656,13 @@ function showGameEnd(
         "hidden"
     );
 
+
+    /*
+        WINNAAR
+    */
+
     if (
-        winner ===
-        myPlayer
+        winner === myPlayer
     ) {
 
         winnerEmoji.textContent =
@@ -677,9 +674,53 @@ function showGameEnd(
         winnerMessage.textContent =
             "Ama asıl kazandığım şey senin sevgini bilmek. Seni çok seviyorum. 💕";
 
-    } else if (
-        winner === "draw"
+
+        /*
+            ALLEEN DE WINNAAR
+            KRIJGT DE SURPRISE-KNOP
+        */
+
+        surpriseButton.classList.remove(
+            "hidden"
+        );
+
+    }
+
+
+    /*
+        VERLIEZER
+    */
+
+    else if (
+        winner !== "draw"
     ) {
+
+        winnerEmoji.textContent =
+            "💗";
+
+        winnerText.textContent =
+            "Bu sefer sevgilin kazandı! 🥰";
+
+        winnerMessage.textContent =
+            "Kaybetmek bile seninle güzel. Seni çok seviyorum. ❤️";
+
+
+        /*
+            VERLIEZER KRIJGT GEEN SURPRISE
+        */
+
+        surpriseButton.classList.add(
+            "hidden"
+        );
+
+    }
+
+
+    /*
+        GELIJKSPEL
+    */
+
+    else {
 
         winnerEmoji.textContent =
             "💕";
@@ -690,25 +731,23 @@ function showGameEnd(
         winnerMessage.textContent =
             "İkiniz de kazandınız çünkü birlikte oynadınız. 🥰";
 
-    } else {
 
-        winnerEmoji.textContent =
-            "💗";
+        /*
+            BIJ GELIJKSPEL GEEN SURPRISE
+        */
 
-        winnerText.textContent =
-            "Sevgilin kazandı! 🥰";
-
-        winnerMessage.textContent =
-            "Kaybetmek bile seninle güzel. Seni çok seviyorum. ❤️";
+        surpriseButton.classList.add(
+            "hidden"
+        );
 
     }
 
 }
 
 
-/*
-    OPNIEUW SPELEN
-*/
+/* =========================
+   OPNIEUW SPELEN
+========================= */
 
 restartButton.addEventListener(
     "click",
@@ -725,13 +764,21 @@ restartButton.addEventListener(
 );
 
 
-/*
-    SURPRISE OPENEN
-*/
+/* =========================
+   SURPRISE OPENEN
+========================= */
 
 surpriseButton.addEventListener(
     "click",
     () => {
+
+        /*
+            Extra controle:
+            alleen de winnaar mag
+            de video openen.
+        */
+
+        if (!gameOver) return;
 
         videoModal.classList.remove(
             "hidden"
@@ -744,10 +791,9 @@ surpriseButton.addEventListener(
             .catch(
                 () => {
                     /*
-                        Sommige telefoons blokkeren
-                        automatisch afspelen.
-                        De gebruiker kan dan
-                        gewoon op Play drukken.
+                        Op sommige telefoons
+                        moet de gebruiker zelf
+                        op Play drukken.
                     */
                 }
             );
@@ -756,9 +802,9 @@ surpriseButton.addEventListener(
 );
 
 
-/*
-    MODAL SLUITEN
-*/
+/* =========================
+   VIDEO SLUITEN
+========================= */
 
 closeModal.addEventListener(
     "click",
@@ -794,11 +840,9 @@ function closeVideo() {
 }
 
 
-/*
-    MOBIEL:
-    VOORKOMEN DAT LANG INDRUKKEN
-    DE PAGINA SELECTEERT
-*/
+/* =========================
+   TOUCH / GSM
+========================= */
 
 document.addEventListener(
     "contextmenu",
@@ -818,9 +862,9 @@ document.addEventListener(
 );
 
 
-/*
-    ROOM CODE AUTOMATISCH HOOFDLETTERS
-*/
+/* =========================
+   ROOM CODE
+========================= */
 
 roomInput.addEventListener(
     "input",
