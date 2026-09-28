@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width,
+        initial-scale=1.0,
+        maximum-scale=1.0,
+        user-scalable=no">
+
+    <meta
+        name="theme-color"
+        content="#ff477e">
+
+    <title>
+        Sonsuza Kadar ❤️
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="style.css">
+</head>
+
+<body>
+
+    <div class="background">
+
+        <div class="floating-hearts">
+            ❤️ 💕 💗 💖 💕 ❤️ 💗
+        </div>
+
+
+        <main class="container">
+
+            <header>
+
+                <h1>
+                    ❤️ Sonsuza Kadar ❤️
+                </h1>
+
+                <p>
+                    İki kalp, tek aşk... 💕
+                </p>
+
+            </header>
+
+
+            <!-- =====================
+                 LOBBY
+            ====================== -->
+
+            <section
+                id="lobby"
+                class="card">
+
+                <div class="big-heart">
+                    💗
+                </div>
+
+                <h2>
+                    Sevgilinle Oyna 🥰
+                </h2>
+
+                <p class="description">
+                    Bir oda oluştur ve oda kodunu
+                    sevgiline gönder. ❤️
+                </p>
+
+
+                <button
+                    id="createButton"
+                    class="main-button">
+
+                    💕 Oda Oluştur
+
+                </button>
+
+
+                <div class="or">
+                    VEYA
+                </div>
+
+
+                <input
+                    id="roomInput"
+                    type="text"
+                    maxlength="5"
+                    placeholder="ODA KODU"
+                    autocomplete="off">
+
+
+                <button
+                    id="joinButton"
+                    class="secondary-button">
+
+                    ❤️ Odaya Katıl
+
+                </button>
+
+            </section>
+
+
+            <!-- =====================
+                 GAME
+            ====================== -->
+
+            <section
+                id="game"
+                class="hidden">
+
+
+                <div class="topbar">
+
+                    <div>
+                        Oda:
+                        <strong
+                            id="roomCode">
+                        </strong>
+                    </div>
+
+                    <div
+                        id="playerInfo">
+                        ❤️
+                    </div>
+
+                </div>
+
+
+                <div
+                    id="status"
+                    class="status">
+
+                    Sevgilini bekliyorsun... 💕
+
+                </div>
+
+
+                <!-- 7 x 6 bord -->
+
+                <div
+                    id="board"
+                    class="board">
+                </div>
+
+
+                <div
+                    id="loveMessage"
+                    class="love-message">
+
+                    Seni çok seviyorum aşkım. ❤️
+
+                </div>
+
+
+                <!-- =====================
+                     EINDE VAN SPEL
+                ====================== -->
+
+                <div
+                    id="gameEnd"
+                    class="game-end hidden">
+
+
+                    <div
+                        id="winnerEmoji"
+                        class="winner-emoji">
+
+                        ❤️
+
+                    </div>
+
+
+                    <h2
+                        id="winnerText">
+
+                        Tebrikler aşkım! ❤️
+
+                    </h2>
+
+
+                    <p
+                        id="winnerMessage">
+
+                        Seni çok seviyorum. ❤️
+
+                    </p>
+
+
+                    <!-- SURPRISE -->
+
+                    <button
+                        id="surpriseButton"
+                        class="surprise-button">
+
+                        🎁 Sürprizim
+
+                    </button>
+
+
+                    <p class="surprise-description">
+
+                        Sana özel küçük bir sürpriz
+                        hazırladım... ❤️
+
+                    </p>
+
+
+                    <!-- OPNIEUW -->
+
+                    <button
+                        id="restartButton"
+                        class="restart-button">
+
+                        🔄 Yeniden Oyna
+
+                    </button>
+
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+
+    <!--
+        DIT ADRES MOET JE LATER
+        VERANDEREN NAAR JOUW
+        ONLINE SERVER.
+    -->
+
+    <script src="https://YOUR-SERVER-URL.onrender.com/socket.io/socket.io.js">
+    </script>
+
+
+    <script src="script.js"></script>
+
+</body>
+
+</html>
