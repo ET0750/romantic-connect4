@@ -1,18 +1,12 @@
+const SERVER_URL =
+    "https://romantic-connect4.onrender.com";
+
+
 /*
-    ⚠️ VERVANG DIT DOOR JOUW SERVER-URL
-
-    Bijvoorbeeld:
-
-    const SERVER_URL =
-        "https://romantic-connect4.onrender.com";
+    SOCKET.IO
 */
 
-const SERVER_URL =
-    "https://YOUR-SERVER-URL.onrender.com";
-
-
-const socket =
-    io(SERVER_URL);
+const socket = io(SERVER_URL);
 
 
 /*
@@ -34,17 +28,22 @@ const joinButton =
 const roomInput =
     document.getElementById("roomInput");
 
+const connectionMessage =
+    document.getElementById(
+        "connectionMessage"
+    );
+
+const boardElement =
+    document.getElementById("board");
+
 const roomCodeElement =
     document.getElementById("roomCode");
-
-const playerInfo =
-    document.getElementById("playerInfo");
 
 const statusElement =
     document.getElementById("status");
 
-const boardElement =
-    document.getElementById("board");
+const turnText =
+    document.getElementById("turnText");
 
 const loveMessage =
     document.getElementById("loveMessage");
@@ -52,35 +51,117 @@ const loveMessage =
 const gameEnd =
     document.getElementById("gameEnd");
 
-const winnerEmoji =
-    document.getElementById("winnerEmoji");
-
 const winnerText =
     document.getElementById("winnerText");
 
 const winnerMessage =
-    document.getElementById("winnerMessage");
+    document.getElementById(
+        "winnerMessage"
+    );
+
+const winnerEmoji =
+    document.getElementById(
+        "winnerEmoji"
+    );
 
 const surpriseButton =
-    document.getElementById("surpriseButton");
+    document.getElementById(
+        "surpriseButton"
+    );
 
 const restartButton =
-    document.getElementById("restartButton");
+    document.getElementById(
+        "restartButton"
+    );
+
+const videoModal =
+    document.getElementById(
+        "videoModal"
+    );
+
+const closeModal =
+    document.getElementById(
+        "closeModal"
+    );
+
+const surpriseVideo =
+    document.getElementById(
+        "surpriseVideo"
+    );
 
 
 /*
-    GAME DATA
+    SPELVARIABELEN
 */
-
-let myPlayer = 0;
 
 let roomCode = "";
 
-let currentPlayer = 1;
+let myPlayer = null;
+
+let board = [];
+
+let currentTurn = "red";
+
+let gameOver = false;
 
 
 /*
-    ODA OLUŞTUR
+    ROMANTISCHE TURKSE BERICHTEN
+*/
+
+const loveMessages = [
+
+    "Seni çok seviyorum aşkım. ❤️",
+
+    "Sen benim en güzel tesadüfümsün. 💕",
+
+    "Kalbimin en güzel yerinde sen varsın. 💗",
+
+    "Seninle geçen her saniye çok değerli. 🥰",
+
+    "İyi ki hayatımdasın sevgilim. ❤️",
+
+    "Sen benim en güzel hikâyemsin. 💖",
+
+    "Seni düşündüğümde yüzümde gülümseme oluşuyor. 😊❤️",
+
+    "Mesafeler önemli değil, kalbim hep seninle. 💕",
+
+    "Sen benim mutluluğumsun. ❤️",
+
+    "Sonsuza kadar seninle olmak istiyorum. 💗"
+
+];
+
+
+/*
+    SOCKET VERBINDING
+*/
+
+socket.on(
+    "connect",
+    () => {
+
+        connectionMessage.textContent =
+            "❤️ Bağlantı hazır!";
+
+    }
+);
+
+
+socket.on(
+    "connect_error",
+    () => {
+
+        connectionMessage.textContent =
+            "Bağlantı kuruluyor... ❤️";
+
+    }
+);
+
+
+/*
+    ROOM MAKEN
 */
 
 createButton.addEventListener(
@@ -90,12 +171,13 @@ createButton.addEventListener(
         socket.emit(
             "createRoom"
         );
+
     }
 );
 
 
 /*
-    ODAYA KATIL
+    ROOM JOINEN
 */
 
 joinButton.addEventListener(
@@ -107,70 +189,216 @@ joinButton.addEventListener(
                 .trim()
                 .toUpperCase();
 
+        if (!code) {
 
-        if (
-            code.length !== 5
-        ) {
-
-            alert(
-                "Lütfen 5 haneli oda kodunu gir. ❤️"
-            );
+            connectionMessage.textContent =
+                "Lütfen oda kodunu yaz. ❤️";
 
             return;
         }
-
 
         socket.emit(
             "joinRoom",
             code
         );
+
     }
 );
 
 
 /*
-    ODA OLUŞTURULDU
+    ROOM GEMAAKT
 */
 
 socket.on(
     "roomCreated",
-    data => {
-
-        myPlayer =
-            data.player;
+    (data) => {
 
         roomCode =
             data.roomCode;
 
-        openGame();
+        myPlayer =
+            data.player || "red";
+
+        enterGame();
+
+        statusElement.textContent =
+            "Sevgilini bekliyorsun... 💕";
+
     }
 );
 
 
 /*
-    ODAYA KATILDI
+    ROOM GEJOINED
 */
 
 socket.on(
     "roomJoined",
-    data => {
-
-        myPlayer =
-            data.player;
+    (data) => {
 
         roomCode =
             data.roomCode;
 
-        openGame();
+        myPlayer =
+            data.player || "yellow";
+
+        enterGame();
+
     }
 );
 
 
 /*
-    GAME OPEN
+    ROOM FOUT
 */
 
-function openGame() {
+socket.on(
+    "roomError",
+    (message) => {
+
+        connectionMessage.textContent =
+            message ||
+            "Odaya katılamadı. ❤️";
+
+    }
+);
+
+
+/*
+    SPEL START
+*/
+
+socket.on(
+    "gameStart",
+    (data) => {
+
+        if (data) {
+
+            board =
+                data.board ||
+                createEmptyBoard();
+
+            currentTurn =
+                data.currentTurn ||
+                "red";
+
+        } else {
+
+            board =
+                createEmptyBoard();
+
+            currentTurn =
+                "red";
+        }
+
+        gameOver = false;
+
+        gameEnd.classList.add(
+            "hidden"
+        );
+
+        drawBoard();
+
+        updateTurn();
+
+        showRandomLoveMessage();
+
+    }
+);
+
+
+/*
+    ANDERE SPELER MAAKT ZET
+*/
+
+socket.on(
+    "move",
+    (data) => {
+
+        if (!data) return;
+
+        board =
+            data.board ||
+            board;
+
+        currentTurn =
+            data.currentTurn ||
+            currentTurn;
+
+        drawBoard();
+
+        updateTurn();
+
+        showRandomLoveMessage();
+
+    }
+);
+
+
+/*
+    SPEL EINDE
+*/
+
+socket.on(
+    "gameOver",
+    (data) => {
+
+        if (!data) return;
+
+        board =
+            data.board ||
+            board;
+
+        drawBoard();
+
+        gameOver = true;
+
+        showGameEnd(
+            data.winner
+        );
+
+    }
+);
+
+
+/*
+    OPNIEUW
+*/
+
+socket.on(
+    "gameRestarted",
+    (data) => {
+
+        board =
+            data.board ||
+            createEmptyBoard();
+
+        currentTurn =
+            data.currentTurn ||
+            "red";
+
+        gameOver = false;
+
+        gameEnd.classList.add(
+            "hidden"
+        );
+
+        drawBoard();
+
+        updateTurn();
+
+        showRandomLoveMessage();
+
+    }
+);
+
+
+/*
+    GAME BINNENGAAN
+*/
+
+function enterGame() {
 
     lobby.classList.add(
         "hidden"
@@ -180,104 +408,41 @@ function openGame() {
         "hidden"
     );
 
-
     roomCodeElement.textContent =
         roomCode;
 
+    board =
+        createEmptyBoard();
 
-    if (
-        myPlayer === 1
-    ) {
+    drawBoard();
 
-        playerInfo.textContent =
-            "Sen ❤️";
-
-    } else {
-
-        playerInfo.textContent =
-            "Sen 🧡";
-    }
 }
 
 
 /*
-    GAME STATE
+    LEGE BOARD
 */
 
-socket.on(
-    "gameState",
-    data => {
+function createEmptyBoard() {
 
-        currentPlayer =
-            data.currentPlayer;
+    return Array.from(
+        {
+            length: 6
+        },
+        () =>
+            Array(7).fill(null)
+    );
 
-
-        renderBoard(
-            data.board
-        );
-
-
-        /*
-            Wachten
-        */
-
-        if (
-            data.players < 2
-        ) {
-
-            statusElement.textContent =
-                "💕 Sevgilinin oyuna katılması bekleniyor...";
-
-            return;
-        }
-
-
-        /*
-            Game over
-        */
-
-        if (
-            data.gameOver
-        ) {
-
-            showWinner(
-                data.winner
-            );
-
-            return;
-        }
-
-
-        /*
-            Beurt
-        */
-
-        if (
-            currentPlayer ===
-            myPlayer
-        ) {
-
-            statusElement.textContent =
-                "❤️ Sıra sende aşkım!";
-
-        } else {
-
-            statusElement.textContent =
-                "💕 Şimdi sevgilinin sırası...";
-        }
-    }
-);
+}
 
 
 /*
-    BORD
+    BOARD TEKENEN
 */
 
-function renderBoard(board) {
+function drawBoard() {
 
-    boardElement.innerHTML =
-        "";
-
+    boardElement.innerHTML = "";
 
     for (
         let row = 0;
@@ -286,9 +451,9 @@ function renderBoard(board) {
     ) {
 
         for (
-            let column = 0;
-            column < 7;
-            column++
+            let col = 0;
+            col < 7;
+            col++
         ) {
 
             const cell =
@@ -296,58 +461,50 @@ function renderBoard(board) {
                     "button"
                 );
 
+            cell.type = "button";
 
             cell.className =
                 "cell";
 
-
-            cell.type =
-                "button";
-
+            cell.dataset.column =
+                col;
 
             const value =
-                board[
-                    row * 7 + column
-                ];
-
+                board[row]?.[col];
 
             if (
-                value === 1
+                value === "red"
             ) {
 
                 cell.classList.add(
-                    "player1"
+                    "red-piece"
                 );
+
             }
 
-
             if (
-                value === 2
+                value === "yellow"
             ) {
 
                 cell.classList.add(
-                    "player2"
+                    "yellow-piece"
                 );
+
             }
 
+
+            /*
+                TOUCH + MUIS
+            */
 
             cell.addEventListener(
                 "click",
                 () => {
 
-                    if (
-                        currentPlayer !==
-                        myPlayer
-                    ) {
-
-                        return;
-                    }
-
-
-                    socket.emit(
-                        "dropPiece",
-                        column
+                    playColumn(
+                        col
                     );
+
                 }
             );
 
@@ -355,8 +512,124 @@ function renderBoard(board) {
             boardElement.appendChild(
                 cell
             );
+
         }
+
     }
+
+}
+
+
+/*
+    STEEN PLAATSEN
+*/
+
+function playColumn(column) {
+
+    if (gameOver) return;
+
+    if (
+        currentTurn !==
+        myPlayer
+    ) {
+
+        return;
+    }
+
+
+    /*
+        DIRECTE LOKALE CHECK
+        ZODAT JE NIET PER ONGELUK
+        KLIKT OP EEN VOLLE KOLOM
+    */
+
+    const row =
+        findAvailableRow(
+            column
+        );
+
+    if (row === -1) {
+
+        loveMessage.textContent =
+            "Bu sütun dolu aşkım. Başka bir sütun seç. ❤️";
+
+        return;
+    }
+
+
+    /*
+        SERVER
+    */
+
+    socket.emit(
+        "move",
+        {
+            roomCode,
+            column
+        }
+    );
+
+}
+
+
+/*
+    VRIJE RIJ VINDEN
+*/
+
+function findAvailableRow(
+    column
+) {
+
+    for (
+        let row = 5;
+        row >= 0;
+        row--
+    ) {
+
+        if (
+            !board[row] ||
+            !board[row][column]
+        ) {
+
+            return row;
+        }
+
+    }
+
+    return -1;
+
+}
+
+
+/*
+    BEURT UPDATE
+*/
+
+function updateTurn() {
+
+    if (gameOver) return;
+
+    if (
+        currentTurn ===
+        myPlayer
+    ) {
+
+        statusElement.textContent =
+            "Sıra sende aşkım ❤️";
+
+        turnText.textContent =
+            "💗 Senin sıran";
+
+    } else {
+
+        statusElement.textContent =
+            "Sevgilinin sırası... 💕";
+
+        turnText.textContent =
+            "💕 Onun sırası";
+
+    }
+
 }
 
 
@@ -364,193 +637,202 @@ function renderBoard(board) {
     ROMANTISCH BERICHT
 */
 
-socket.on(
-    "loveMessage",
-    message => {
+function showRandomLoveMessage() {
 
-        loveMessage.textContent =
-            message;
-    }
-);
+    const index =
+        Math.floor(
+            Math.random() *
+            loveMessages.length
+        );
+
+    loveMessage.textContent =
+        loveMessages[index];
+
+}
 
 
 /*
-    WINNAAR
+    EINDE SPEL
 */
 
-function showWinner(winner) {
+function showGameEnd(
+    winner
+) {
 
     gameEnd.classList.remove(
         "hidden"
     );
 
-
-    /*
-        Gelijkspel
-    */
-
     if (
-        winner === 0
+        winner ===
+        myPlayer
+    ) {
+
+        winnerEmoji.textContent =
+            "💖";
+
+        winnerText.textContent =
+            "Kazandın aşkım! ❤️";
+
+        winnerMessage.textContent =
+            "Ama asıl kazandığım şey senin sevgini bilmek. Seni çok seviyorum. 💕";
+
+    } else if (
+        winner === "draw"
     ) {
 
         winnerEmoji.textContent =
             "💕";
 
         winnerText.textContent =
-            "Berabere! 💕";
+            "Berabere! ❤️";
 
         winnerMessage.textContent =
-            "Ama gerçek kazanan aşkınız. ❤️";
+            "İkiniz de kazandınız çünkü birlikte oynadınız. 🥰";
 
-        return;
-    }
-
-
-    /*
-        Jij gewonnen
-    */
-
-    if (
-        winner === myPlayer
-    ) {
+    } else {
 
         winnerEmoji.textContent =
-            "🏆❤️";
+            "💗";
 
         winnerText.textContent =
-            "Tebrikler aşkım! 🥰";
+            "Sevgilin kazandı! 🥰";
 
         winnerMessage.textContent =
-            "Bugün oyunu kazandın ama benim kalbimi zaten çoktan kazandın. Seni çok seviyorum! ❤️";
+            "Kaybetmek bile seninle güzel. Seni çok seviyorum. ❤️";
 
     }
 
-    /*
-        De ander gewonnen
-    */
-
-    else {
-
-        winnerEmoji.textContent =
-            "💖";
-
-        winnerText.textContent =
-            "Tebrikler sevgilim! 🥰";
-
-        winnerMessage.textContent =
-            "Bu oyunu sen kazandın ama benim kalbimi her gün yeniden kazanıyorsun. Seni çok seviyorum! ❤️";
-    }
 }
 
 
 /*
-    🎁 SURPRISE
-*/
-
-surpriseButton.addEventListener(
-    "click",
-    () => {
-
-        const link =
-            document.createElement(
-                "a"
-            );
-
-
-        link.href =
-            "./surprise.mp4";
-
-
-        link.download =
-            "Sana_Ozel_Surprizim.mp4";
-
-
-        document.body.appendChild(
-            link
-        );
-
-
-        link.click();
-
-
-        document.body.removeChild(
-            link
-        );
-    }
-);
-
-
-/*
-    YENIDEN OYNA
+    OPNIEUW SPELEN
 */
 
 restartButton.addEventListener(
     "click",
     () => {
 
-        gameEnd.classList.add(
+        socket.emit(
+            "restartGame",
+            {
+                roomCode
+            }
+        );
+
+    }
+);
+
+
+/*
+    SURPRISE OPENEN
+*/
+
+surpriseButton.addEventListener(
+    "click",
+    () => {
+
+        videoModal.classList.remove(
             "hidden"
         );
 
+        surpriseVideo.currentTime =
+            0;
 
-        socket.emit(
-            "restartGame"
-        );
+        surpriseVideo.play()
+            .catch(
+                () => {
+                    /*
+                        Sommige telefoons blokkeren
+                        automatisch afspelen.
+                        De gebruiker kan dan
+                        gewoon op Play drukken.
+                    */
+                }
+            );
+
     }
 );
 
 
 /*
-    ERROR
+    MODAL SLUITEN
 */
 
-socket.on(
-    "errorMessage",
-    message => {
+closeModal.addEventListener(
+    "click",
+    closeVideo
+);
 
-        alert(message);
+
+videoModal.addEventListener(
+    "click",
+    (event) => {
+
+        if (
+            event.target ===
+            videoModal
+        ) {
+
+            closeVideo();
+
+        }
+
+    }
+);
+
+
+function closeVideo() {
+
+    videoModal.classList.add(
+        "hidden"
+    );
+
+    surpriseVideo.pause();
+
+}
+
+
+/*
+    MOBIEL:
+    VOORKOMEN DAT LANG INDRUKKEN
+    DE PAGINA SELECTEERT
+*/
+
+document.addEventListener(
+    "contextmenu",
+    (event) => {
+
+        if (
+            event.target.closest(
+                ".board"
+            )
+        ) {
+
+            event.preventDefault();
+
+        }
+
     }
 );
 
 
 /*
-    SEVGİLİ AYRILDI
+    ROOM CODE AUTOMATISCH HOOFDLETTERS
 */
 
-socket.on(
-    "opponentLeft",
+roomInput.addEventListener(
+    "input",
     () => {
 
-        statusElement.textContent =
-            "💕 Sevgilin oyundan ayrıldı.";
+        roomInput.value =
+            roomInput.value
+                .toUpperCase()
+                .replace(
+                    /[^A-Z0-9]/g,
+                    ""
+                );
 
-        loveMessage.textContent =
-            "Merak etme, aşkınız oyundan daha güçlü. ❤️";
-    }
-);
-
-
-/*
-    SERVER CONNECTION
-*/
-
-socket.on(
-    "connect",
-    () => {
-
-        console.log(
-            "❤️ Online server bağlantısı başarılı."
-        );
-    }
-);
-
-
-socket.on(
-    "connect_error",
-    () => {
-
-        console.log(
-            "Server bağlantısı kurulamadı."
-        );
     }
 );
